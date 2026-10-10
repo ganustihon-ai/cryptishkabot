@@ -13,14 +13,36 @@ from aiogram.types import (Message, CallbackQuery, LabeledPrice,
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from pathlib import Path
+
+
+def _load_env():
+    """Читает файл .env рядом с bot.py (для запуска на своём компьютере).
+    На хостинге файла нет, там значения приходят из переменных окружения."""
+    p = Path(__file__).with_name(".env")
+    if not p.exists():
+        return
+    for line in p.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+_load_env()
 
 # ==================== НАСТРОЙКИ ====================
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+if not BOT_TOKEN:
+    raise SystemExit(
+        "Не задан BOT_TOKEN. Создай файл .env рядом с bot.py со строкой "
+        "BOT_TOKEN=токен_от_BotFather (на хостинге - добавь переменную окружения BOT_TOKEN)")
 ADMIN_IDS = [883137958]
 BOT_USERNAME = "cryptishkabot"
 
 # === OpenRouter ===
-OPENROUTER_KEY = os.environ["OPENROUTER_KEY"]
+OPENROUTER_KEY = os.getenv("OPENROUTER_KEY", "").strip()
 
 FREE_LIMIT = 15
 TARIFFS = {
@@ -85,6 +107,8 @@ POPULAR = {
 
 # ==================== ИИ (OpenRouter auto-free) ====================
 async def ask_ai(user_message: str) -> str:
+    if not OPENROUTER_KEY:
+        return "ИИ временно недоступен. Напишите администратору: /support"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_KEY}",
         "Content-Type": "application/json",
